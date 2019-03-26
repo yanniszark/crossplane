@@ -22,13 +22,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	corev1alpha1 "github.com/crossplaneio/crossplane/pkg/apis/core/v1alpha1"
-	"github.com/crossplaneio/crossplane/pkg/apis/gcp"
-	"github.com/crossplaneio/crossplane/pkg/apis/gcp/storage/v1alpha1"
-	gcpv1alpha1 "github.com/crossplaneio/crossplane/pkg/apis/gcp/v1alpha1"
-	gcpstorage "github.com/crossplaneio/crossplane/pkg/clients/gcp/storage"
-	gcpstoragefake "github.com/crossplaneio/crossplane/pkg/clients/gcp/storage/fake"
-	"github.com/crossplaneio/crossplane/pkg/test"
 	"github.com/go-test/deep"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +34,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	corev1alpha1 "github.com/crossplaneio/crossplane/pkg/apis/core/v1alpha1"
+	"github.com/crossplaneio/crossplane/pkg/apis/gcp"
+	"github.com/crossplaneio/crossplane/pkg/apis/gcp/storage/v1alpha1"
+	gcpv1alpha1 "github.com/crossplaneio/crossplane/pkg/apis/gcp/v1alpha1"
+	gcpstorage "github.com/crossplaneio/crossplane/pkg/clients/gcp/storage"
+	gcpstoragefake "github.com/crossplaneio/crossplane/pkg/clients/gcp/storage/fake"
+	"github.com/crossplaneio/crossplane/pkg/test"
 )
 
 func init() {
@@ -220,8 +221,14 @@ func (s *secret) withKeyData(key, data string) *secret {
 	return s
 }
 
+const (
+	testNamespace  = "default"
+	testBucketName = "testBucket"
+)
+
 func TestReconciler_Reconcile(t *testing.T) {
-	ns, name := "foo", "bar"
+	ns := testNamespace
+	name := testBucketName
 	key := types.NamespacedName{Namespace: ns, Name: name}
 	req := reconcile.Request{NamespacedName: key}
 	ctx := context.TODO()
@@ -318,8 +325,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 
 func Test_bucketFactory_newHandler(t *testing.T) {
 	ctx := context.TODO()
-	ns := "default"
-	bucketName := "test-bucket"
+	ns := testNamespace
+	bucketName := testBucketName
 	providerName := "test-provider"
 	secretName := "test-secret"
 	secretKey := "creds"
@@ -531,13 +538,12 @@ func Test_bucketHandler_delete(t *testing.T) {
 
 func Test_bucketHandler_sync(t *testing.T) {
 	ctx := context.TODO()
-	ns := "default"
-	name := "test-bucket"
+	ns := testNamespace
+	name := testBucketName
 	type fields struct {
 		sc  gcpstorage.Client
 		cc  client.Client
 		obj *v1alpha1.Bucket
-		pid string
 	}
 	type want struct {
 		err error
@@ -655,8 +661,8 @@ func Test_bucketHandler_sync(t *testing.T) {
 
 func Test_bucketCreateUpdater_create(t *testing.T) {
 	ctx := context.TODO()
-	ns := "default"
-	name := "test-bucket"
+	ns := testNamespace
+	name := testBucketName
 	type fields struct {
 		sc        gcpstorage.Client
 		cc        client.Client
@@ -792,8 +798,8 @@ func Test_bucketCreateUpdater_create(t *testing.T) {
 
 func Test_bucketCreateUpdater_update(t *testing.T) {
 	ctx := context.TODO()
-	ns := "default"
-	name := "test-bucket"
+	ns := testNamespace
+	name := testBucketName
 	type fields struct {
 		sc gcpstorage.Client
 		cc client.Client
