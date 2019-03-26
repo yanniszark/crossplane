@@ -129,6 +129,11 @@ func newBucket(ns, name string) *bucket {
 	}}
 }
 
+func (b *bucket) withUID(uid string) *bucket {
+	b.ObjectMeta.UID = types.UID(uid)
+	return b
+}
+
 func (b *bucket) withCondition(c corev1alpha1.Condition) *bucket {
 	b.Status.ConditionedStatus.SetCondition(c)
 	return b
@@ -545,6 +550,23 @@ func Test_bucketHandler_sync(t *testing.T) {
 		want   want
 	}{
 		{
+			name: "secret error",
+			fields: fields{
+				cc: &test.MockClient{
+					MockCreate: func(ctx context.Context, obj runtime.Object) error {
+						return errors.New("test-error-saving-secret")
+					},
+					MockStatusUpdate: func(ctx context.Context, obj runtime.Object) error { return nil },
+				},
+				obj: newBucket(ns, name).Bucket,
+			},
+			want: want{
+				err: nil,
+				res: resultRequeue,
+				obj: newBucket(ns, name).withFailedCondition(failedToSaveSecret, "test-error-saving-secret").Bucket,
+			},
+		},
+		{
 			name: "attrs error",
 			fields: fields{
 				sc: &gcpstoragefake.MockBucketClient{
@@ -553,44 +575,55 @@ func Test_bucketHandler_sync(t *testing.T) {
 					},
 				},
 				cc: &test.MockClient{
+					MockCreate: func(ctx context.Context, obj runtime.Object) error { return nil },
 					MockStatusUpdate: func(ctx context.Context, obj runtime.Object) error {
 						return nil
 					},
 				},
-				obj: newBucket(ns, name).Bucket,
+				obj: newBucket(ns, name).withUID("test-uid").Bucket,
 			},
 			want: want{
 				err: nil,
 				res: resultRequeue,
-				obj: newBucket(ns, name).withFailedCondition(failedToRetrieve, "test-attrs-error").Bucket,
+				obj: newBucket(ns, name).withUID("test-uid").withFailedCondition(failedToRetrieve, "test-attrs-error").Bucket,
 			},
 		},
 		{
 			name: "attrs not found (create)",
 			fields: fields{
+				cc: &test.MockClient{
+					MockCreate: func(ctx context.Context, obj runtime.Object) error { return nil },
+				},
 				sc: &gcpstoragefake.MockBucketClient{
 					MockAttrs: func(i context.Context) (attrs *storage.BucketAttrs, e error) {
 						return nil, storage.ErrBucketNotExist
 					},
 				},
+				obj: newBucket(ns, name).withUID("test-uid").Bucket,
 			},
 			want: want{
 				err: nil,
 				res: requeueOnSuccess,
+				obj: newBucket(ns, name).withUID("test-uid").Bucket,
 			},
 		},
 		{
 			name: "update",
 			fields: fields{
+				cc: &test.MockClient{
+					MockCreate: func(ctx context.Context, obj runtime.Object) error { return nil },
+				},
 				sc: &gcpstoragefake.MockBucketClient{
 					MockAttrs: func(i context.Context) (attrs *storage.BucketAttrs, e error) {
 						return &storage.BucketAttrs{}, nil
 					},
 				},
+				obj: newBucket(ns, name).withUID("test-uid").Bucket,
 			},
 			want: want{
 				err: nil,
 				res: requeueOnSuccess,
+				obj: newBucket(ns, name).withUID("test-uid").Bucket,
 			},
 		},
 	}
